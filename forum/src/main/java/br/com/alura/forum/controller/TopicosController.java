@@ -2,6 +2,7 @@ package br.com.alura.forum.controller;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import javax.transaction.Transactional;
 import javax.validation.Valid;
@@ -63,29 +64,42 @@ public class TopicosController {
 	}
 	
 	@GetMapping("/{id}")//id virou um parametro dinamico
-	public DetalhesDoTopicoDto detalhar(@PathVariable Long id){// pathvariable é a url
+	public ResponseEntity<DetalhesDoTopicoDto> detalhar(@PathVariable Long id){// pathvariable é a url
 	//ele associa o nome id no getmapping com o id parametro com path variable
 	//se eu colocasse outro nome no parametro teria q colocar ex: "@PathVariable("id") Long codigo" 
-		Topico topico = topicoRepository.getById(id);
-		return new DetalhesDoTopicoDto(topico);
+		Optional<Topico> topico = topicoRepository.findById(id);//se nao encontrar nao joga exception
+		if(topico.isPresent()) {
+			return ResponseEntity.ok(new DetalhesDoTopicoDto(topico.get()));// get pega o item d fato dentro do optional
+		}
+		return ResponseEntity.notFound().build();
+		
 	}
 	
 	@PutMapping("/{id}")//vou usar o put pq n sei se ja existe - e é mais usado no mercado
 	//diferenca do put e patch: put muda tudo e patch so algumas coisas(que eu quiser)
 	@Transactional//avisa o spring commitar no bd qnd terminar o metodo se nao tiverr uma exception
 	public ResponseEntity<TopicoDto> atualizar(@PathVariable Long id, @RequestBody @Valid AtualizacaoTopicoForm form){
-		Topico topico = form.atualizar(id, topicoRepository);//qnd termina o metodo ele ja atualizou no bd
-		
-		return ResponseEntity.ok(new TopicoDto(topico));// parametro ok vai ser devolvido como resposta pelo servidor
+		Optional<Topico> optional = topicoRepository.findById(id);//se nao encontrar nao joga exception
+		if(optional.isPresent()) {
+			Topico topico = form.atualizar(id, topicoRepository);//qnd termina o metodo ele ja atualizou no bd
+			
+			return ResponseEntity.ok(new TopicoDto(topico));// parametro ok vai ser devolvido como resposta pelo servidor
+		}
+		return ResponseEntity.notFound().build();
 	}
 	
 	
-	@DeleteMapping("/{id}")
+	@DeleteMapping("/{id}")//anotação mais apropriada no cenário de exclusão de recursos.
 	@Transactional//pra ter certeza que vai funcionar colocamos nos deletar, atualizar e cadastrar pq se mudar o bd ainda funciona
 	public ResponseEntity<?> remover(@PathVariable Long id){
-		topicoRepository.deleteById(id);
+		Optional<Topico> optional = topicoRepository.findById(id);//se nao encontrar nao joga exception
+		if(optional.isPresent()) {
+			topicoRepository.deleteById(id);
+			
+			return ResponseEntity.ok().build();
+		}
 		
-		return ResponseEntity.ok().build();
+		return ResponseEntity.notFound().build();
 	}
 		
 }
